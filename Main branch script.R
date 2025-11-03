@@ -1,6 +1,8 @@
 #Libraries
 library(readr)
-
+library(tidyverse)
+library(reshape2)
+library(pastecs)
 #First I will import the dataset we will be working from and call it raw
 #raw <- read_csv("C:/Users/Owner/Downloads/TextMessages.csv")
 
@@ -43,3 +45,69 @@ is.factor(df$Group)
 #It is TRUE confirming we successfully converted it to a factor
 #Now that our data is imported and has the correct names and classes, we can
 #begin to create our figures and start our analysis. 
+
+#(JR) I'll start by reordering the columns and then shifting to a long "tidy"
+#data set by "melting" the Baseline and Six_months columns. I create an object,
+#pipe df into select to reorder my columns (just a little OCD), pipe into
+#rename(this is so the six months variable appears without the underscore in the graph),
+#and pipe into melt to create a tidy data frame.
+
+df_long <- df %>% select(Participant, Group, Baseline, Six_months) %>% 
+  rename("Six months" = Six_months) %>% 
+    melt(id.vars = c("Participant", "Group"), variable.name = "Visit", 
+          value.name = "Text_Count") 
+
+#Next, I'll create the stratified boxplot by group. I assign an object, pipe the 
+#new data frame into ggplot, assign aesthetics, add a boxplot layer (with an argument
+#or the outliers, but maybe we should just remove?), set a scale for the y-axis 
+#with scale_y_continuous, facet by group with a labeller argument for the two groups,
+#add a color scheme by visit, and in the themes layer, I remove the legend, and 
+#(just for fun) change the background color.
+
+text_count_boxplot <- df_long %>% 
+  ggplot(aes(x = Visit, y = Text_Count, fill = Visit)) +
+  geom_boxplot(outlier.size = .8) + scale_y_continuous(limits = c(0, 100), 
+                      breaks = seq(from = 0, to = 100, by = 10)) +
+    facet_grid(~Group, labeller = label_both) + 
+      scale_fill_manual(values = c("tomato", "forestgreen")) +
+        theme(legend.position = "none", 
+                  panel.background = element_rect(fill = "lightblue")) +
+  labs(title = "Text messages by Group", y = "Text Count")
+    
+text_count_boxplot
+
+#Just to see what it would look like, I removed the outliers and the 
+#scale_y_continuous argument, replacing it with "free_y" in facet_grid; this
+#allows R to handle how to assign the y-axis. I like this graph better, but would
+#love input!!
+
+text_count_boxplot2 <- df_long %>% 
+  ggplot(aes(x = Visit, y = Text_Count, fill = Visit)) +
+  geom_boxplot(outliers = FALSE)  +
+  facet_grid(~Group, labeller = label_both, scales = "free_y") + 
+  scale_fill_manual(values = c("tomato", "forestgreen")) +
+  theme(legend.position = "none", 
+        panel.background = element_rect(fill = "lightblue")) +
+  labs(title = "Text messages by Group", y = "Text Count")
+
+text_count_boxplot2
+
+#Summary statistics by group and time:
+
+by(df$Baseline, df$Group, function(x) round(stat.desc(x, norm = TRUE), 3))
+by(df$Baseline, df$Group, summary)
+#At Baseline, the two groups are quite similar with similar means, medians
+#and interquartile ranges. The variances are also quite close, thus so is the 
+#coefficients of variation and 95% CIs. For both groups, a Shapiro-Wilks normality
+#test shows both groups with a high likelyhood of being normally distributed.
+
+by(df$Six_months, df$Group, function(x) round(stat.desc(x, norm = TRUE), 3))
+by(df$Six_months, df$Group, summary)
+
+#At six months, Group 1 is lower in almost every category: mean, median, 
+#interquartile range. However, group 1 shows significantly more deviation, with
+#a coefficient of varation more than twice that of group 2. Group 1 also may
+#not be normally distributed, as the output for the Shapiro-Wilks test would
+#reject the null at an alpha level = .05 with a p-value of .006, suggesting that
+#the data is likely not normally distributed. Group two, on the other hand,
+#tests as likely normal.
