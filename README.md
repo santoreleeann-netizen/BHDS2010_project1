@@ -9,7 +9,7 @@ adding branches and completing each part on our own time using this as the
 basis.
 
 10/29/25 JR: First commit with boxplots added. I included two, and would love 
-to know hich you like more, and if you think they need anything else!
+to know which you like more, and if you think they need anything else!
 
 11/1/25 LAS: Script for bar plot
 
@@ -28,3 +28,4 @@ I think this is good to submit, I just need to check on what a read me is
 and update that
 11/4/25: OK read me is updated. Let me know if good and then I will submit the
 final pdf and read.me final (am I forgetting anything else?)
+11/4/25 JR: Everything looks great!
