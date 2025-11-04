@@ -1,3 +1,8 @@
+###############################################################################
+######################Data import and wrangling - LAS##########################
+###############################################################################
+
+
 #Libraries
 library(readr)
 library(tidyverse)
@@ -46,10 +51,15 @@ is.factor(df$Group)
 #Now that our data is imported and has the correct names and classes, we can
 #begin to create our figures and start our analysis. 
 
-#(JR) I'll start by reordering the columns and then shifting to a long "tidy"
+###############################################################################
+################Box Plot - JR##################################################
+###############################################################################
+
+#I'll start by reordering the columns and then shifting to a long "tidy"
 #data set by "melting" the Baseline and Six_months columns. I create an object,
 #pipe df into select to reorder my columns (just a little OCD), pipe into
-#rename(this is so the six months variable appears without the underscore in the graph),
+#rename(this is so the six months variable appears without the underscore in 
+#the graph),
 #and pipe into melt to create a tidy data frame.
 
 df_long <- df %>% select(Participant, Group, Baseline, Six_months) %>% 
@@ -58,39 +68,102 @@ df_long <- df %>% select(Participant, Group, Baseline, Six_months) %>%
           value.name = "Text_Count") 
 
 #Next, I'll create the stratified boxplot by group. I assign an object, pipe the 
-#new data frame into ggplot, assign aesthetics, add a boxplot layer (with an argument
-#or the outliers, but maybe we should just remove?), set a scale for the y-axis 
-#with scale_y_continuous, facet by group with a labeller argument for the two groups,
-#add a color scheme by visit, and in the themes layer, I remove the legend, and 
-#(just for fun) change the background color.
-
-text_count_boxplot <- df_long %>% 
-  ggplot(aes(x = Visit, y = Text_Count, fill = Visit)) +
-  geom_boxplot(outlier.size = .8) + scale_y_continuous(limits = c(0, 100), 
-                      breaks = seq(from = 0, to = 100, by = 10)) +
-    facet_grid(~Group, labeller = label_both) + 
-      scale_fill_manual(values = c("tomato", "forestgreen")) +
-        theme(legend.position = "none", 
-                  panel.background = element_rect(fill = "lightblue")) +
-  labs(title = "Text messages by Group", y = "Text Count")
-    
-text_count_boxplot
-
-#Just to see what it would look like, I removed the outliers and the 
-#scale_y_continuous argument, replacing it with "free_y" in facet_grid; this
-#allows R to handle how to assign the y-axis. I like this graph better, but would
-#love input!!
+#new data frame into ggplot, assign aesthetics, add a boxplot layer, 
+#removed the outliers, used "free_y" in facet_grid; this
+#allows R to handle how to assign the y-axis.facet by group with a labeller 
+#argument for the two groups, add a color scheme by visit, and in the themes 
+#layer, I remove the legend, and (just for fun) change the background color.
 
 text_count_boxplot2 <- df_long %>% 
   ggplot(aes(x = Visit, y = Text_Count, fill = Visit)) +
   geom_boxplot(outliers = FALSE)  +
   facet_grid(~Group, labeller = label_both, scales = "free_y") + 
   scale_fill_manual(values = c("tomato", "forestgreen")) +
-  theme(legend.position = "none", 
-        panel.background = element_rect(fill = "lightblue")) +
+  theme(legend.position = "none" 
+      ) + theme_minimal() +
   labs(title = "Text messages by Group", y = "Text Count")
 
 text_count_boxplot2
+
+##############################################################################
+################bar charts - LAS##############################################
+###############################################################################
+
+# Libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(reshape2)
+
+#To make our bar plot we will first convert our data from wide to long format.
+#Jonathan has already done this above
+
+#Next, since our bar plot will compare the means between groups, we will 
+#calculate the mean text messages and 95% CI for each group and timepoint.
+# Compute summary statistics for mean and 95% CI per group/time. We will
+#put these results in their own data frame called df_summary
+
+df_summary <- df_long %>%
+  group_by(Group, Visit) %>%
+  summarize(
+    mean_count = mean(Text_Count, na.rm = TRUE),
+    sd = sd(Text_Count, na.rm = TRUE),
+    n = n(),
+    se = sd / sqrt(n),
+    ci_lower = mean_count - 1.96 * se,
+    ci_upper = mean_count + 1.96 * se,
+    .groups = "drop"
+  )
+
+#Now that we have our values, I will  rename them so that they look more
+#aesthetically pleasing in our plot. 
+df_summary <- df_summary %>%
+  mutate(
+    Visit = recode(Visit,
+                  "Baseline" = "Baseline",
+                  "Six_months" = "Six months"),
+    Group = recode_factor(as.factor(Group),
+                          "1" = "Group 1",
+                          "2" = "Group 2")
+  )
+
+#we can now plot our bar plot. We will use ggplot to
+#make a bar plot that compares the mean text messages at each time point and
+#we will facet by groups so that we can visualize the differences in time
+#points between groups as well
+
+ggplot(df_summary, aes(x = Visit, y = mean_count, fill = Visit)) +
+  geom_col(position = position_dodge(), width = 0.7) +
+  geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper),
+                width = 0.2, position = position_dodge(0.7)) +
+  facet_wrap(~ Group) +
+  labs(
+    title = "Average Number of Text Messages by Group",
+    x = "Visit",
+    y = "Mean Text Count",
+    fill = "Visit"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("tomato", "forestgreen")) +
+  theme(
+    legend.position = "right",
+    strip.text = element_text(face = "bold")
+  )
+
+#Here we can see the mean and 95% CI plotted at each time point for each group
+#Baseline values are pink and six month follow up values are blue. The color
+#designations are describe din the legend on the right. The panel
+#on the left show the results of group 1 while the one on the right shows the
+#results of group 2.The error bars on the top of each bar represent the 95%
+#CI. We can clearly see that both group one and group 2 experience a decrease
+#In the mean number of messages at follow up compared to baseline. The 95% CI
+#do not appear to overlap in group one, but they do appear to overlap in group
+#2 suggesting that the decrease in messages was statistically significant for
+#group 1 but not for group 2. 
+
+###############################################################################
+#######################Summary statistics  - JR################################
+###############################################################################
 
 #Summary statistics by group and time:
 
