@@ -1,3 +1,11 @@
+---
+title: "Group Project 1"
+author: "Lee Ann & Jonathan"
+date: "2025-11-04"
+output: pdf_document
+---
+
+```{r, warning=FALSE, error=FALSE, echo=TRUE}
 ###############################################################################
 ######################Data import and wrangling - LAS##########################
 ###############################################################################
@@ -183,3 +191,5 @@ by(df$Six_months, df$Group, summary)
 #reject the null at an alpha level = .05 with a p-value of .006, suggesting that
 #the data is likely not normally distributed. Group two, on the other hand,
 #tests as likely normal.
+```
+
